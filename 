@@ -1,0 +1,35 @@
+from openai import OpenAI
+
+import config
+
+
+class DeepSeekAPI:
+    """DeepSeek API 客户端。"""
+
+    def __init__(self):
+        self.client = OpenAI(
+            api_key=config.DEEPSEEK_API_KEY,
+       
+            base_url="https://api.deepseek.com",
+        )
+
+    def chat(
+        self,
+        messages: list[dict],
+    ) -> str:
+        """根据聊天上下文生成 AI 回复。"""
+
+        response = self.client.chat.completions.create(
+            model=config.DEEPSEEK_MODEL,
+            messages=messages,
+            stream=False,
+        )
+
+        content = response.choices[0].message.content
+
+        if not content:
+            raise RuntimeError(
+                "DeepSeek 没有返回有效内容"
+            )
+
+        return content
