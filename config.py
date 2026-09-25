@@ -78,3 +78,13 @@ DEEPSEEK_MODEL = os.getenv(
 POLL_INTERVAL = float(
     os.getenv("POLL_INTERVAL", "3")
 )
+
+AI_SEND_ENABLED = (
+    os.getenv("AI_SEND_ENABLED", "false").lower()
+    == "true"
+)
+
+AI_SYSTEM_PROMPT = os.getenv(
+    "AI_SYSTEM_PROMPT",
+    "你是一个友好、自然、简洁的聊天助手。请你尽量用简洁的语言回复，不要有多余语气话等，另外要求除外。",
+)
