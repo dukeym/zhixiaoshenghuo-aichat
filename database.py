@@ -29,6 +29,15 @@ class Database:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS conversation_memory (
+                    memory_key TEXT PRIMARY KEY,
+                    summary TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
             conn.commit()
 
     def message_exists(self, message_guid: str) -> bool:
@@ -61,7 +70,7 @@ class Database:
                 """,
                 (
                     message["messageGuid"],
-                    message["messageContent"],
+                    message["messageContent"].strip(),
                     int(message["place"]),
                     message["insertTime"],
                 ),
@@ -108,7 +117,7 @@ class Database:
                     place,
                     insert_time
                 FROM messages
-                ORDER BY insert_time DESC
+                ORDER BY insert_time DESC, rowid DESC
                 LIMIT ?
                 """,
                 (limit,),
@@ -117,3 +126,36 @@ class Database:
             rows = cursor.fetchall()
 
         return [dict(row) for row in reversed(rows)]
+
+    def get_message_count(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM messages"
+            ).fetchone()
+        return int(row[0])
+
+    def get_summary(self) -> str:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT summary
+                FROM conversation_memory
+                WHERE memory_key = 'default'
+                """
+            ).fetchone()
+        return row[0] if row else ""
+
+    def save_summary(self, summary: str):
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO conversation_memory
+                    (memory_key, summary, updated_at)
+                VALUES ('default', ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(memory_key) DO UPDATE SET
+                    summary = excluded.summary,
+                    updated_at = excluded.updated_at
+                """,
+                (summary.strip(),),
+            )
+            conn.commit()
