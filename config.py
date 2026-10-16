@@ -70,6 +70,13 @@ DEEPSEEK_MODEL = os.getenv(
     "deepseek-chat"
 )
 
+MIMO_API_KEY = os.getenv("MIMO_API_KEY", "")
+MIMO_BASE_URL = os.getenv(
+    "MIMO_BASE_URL",
+    "https://api.xiaomimimo.com/v1",
+)
+MIMO_MODEL = os.getenv("MIMO_MODEL", "mimo-v2.6-flash")
+
 
 # =========================
 # Bot

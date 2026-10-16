@@ -38,6 +38,14 @@ class Database:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS bot_settings (
+                    setting_key TEXT PRIMARY KEY,
+                    setting_value TEXT NOT NULL
+                )
+                """
+            )
             conn.commit()
 
     def message_exists(self, message_guid: str) -> bool:
@@ -157,5 +165,30 @@ class Database:
                     updated_at = excluded.updated_at
                 """,
                 (summary.strip(),),
+            )
+            conn.commit()
+
+    def get_setting(self, key: str, default: str = "") -> str:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT setting_value
+                FROM bot_settings
+                WHERE setting_key = ?
+                """,
+                (key,),
+            ).fetchone()
+        return row[0] if row else default
+
+    def save_setting(self, key: str, value: str):
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO bot_settings (setting_key, setting_value)
+                VALUES (?, ?)
+                ON CONFLICT(setting_key) DO UPDATE SET
+                    setting_value = excluded.setting_value
+                """,
+                (key, value),
             )
             conn.commit()

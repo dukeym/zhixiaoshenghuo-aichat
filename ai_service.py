@@ -11,9 +11,39 @@ class AIService:
         self.db = Database()
         self.deepseek = DeepSeekAPI()
         self.search = WebSearch()
+        saved_provider = self.db.get_setting(
+            "active_provider",
+            "deepseek",
+        )
+        if saved_provider in {"deepseek", "xiaomimimo"}:
+            try:
+                self.deepseek.switch(saved_provider)
+            except Exception as exc:
+                print(f"恢复模型失败，继续使用 DeepSeek: {exc}")
+                self.deepseek.switch("deepseek")
 
     def reply_to(self, message: dict) -> str:
         """针对一条新消息生成回复。"""
+
+        command = message["messageContent"].strip().lower()
+        if command.startswith("/switch "):
+            target = command.split(None, 1)[1].strip()
+            aliases = {
+                "deepseek": "deepseek",
+                "xiaomimimo": "xiaomimimo",
+            }
+            if target not in aliases:
+                return "用法：/switch deepseek 或 /switch xiaomimimo"
+            try:
+                selected = self.deepseek.switch(aliases[target])
+                self.db.save_setting("active_provider", selected)
+            except Exception as exc:
+                return f"切换失败：{exc}"
+            names = {
+                "deepseek": "DeepSeek",
+                "xiaomimimo": "小米 MiMo",
+            }
+            return f"已切换到 {names[selected]}（{selected}）。"
 
         all_count = self.db.get_message_count()
         if (
