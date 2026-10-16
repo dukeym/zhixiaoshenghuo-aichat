@@ -94,7 +94,18 @@ AI_SYSTEM_PROMPT = os.getenv(
 猫娘模式仍然必须诚实回答知识问题，不要因为角色扮演而捏造事实，也不要使用低俗、冒犯或不适合校园环境的内容。""",
 )
 
-RECENT_MESSAGE_LIMIT = int(os.getenv("RECENT_MESSAGE_LIMIT", "8"))
+RECENT_MESSAGE_LIMIT = int(os.getenv("RECENT_MESSAGE_LIMIT", "6"))
 SUMMARY_REFRESH_INTERVAL = int(
-    os.getenv("SUMMARY_REFRESH_INTERVAL", "10")
+    os.getenv("SUMMARY_REFRESH_INTERVAL", "20")
+)
+
+SEARCH_ENABLED = os.getenv("SEARCH_ENABLED", "false").lower() == "true"
+SEARCH_PROVIDER = os.getenv("SEARCH_PROVIDER", "tavily").lower()
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+SEARCH_MAX_RESULTS = int(os.getenv("SEARCH_MAX_RESULTS", "3"))
+SEARCH_TIMEOUT = float(os.getenv("SEARCH_TIMEOUT", "8"))
+SEARCH_COUNTRY = os.getenv("SEARCH_COUNTRY", "China")
+SEARCH_LOCATION = os.getenv("SEARCH_LOCATION", "河北邯郸")
+SEARCH_SNIPPET_MAX_LENGTH = int(
+    os.getenv("SEARCH_SNIPPET_MAX_LENGTH", "300")
 )

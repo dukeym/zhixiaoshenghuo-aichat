@@ -1,6 +1,7 @@
 import config
 from database import Database
 from deepseek_api import DeepSeekAPI
+from web_search import WebSearch
 
 
 class AIService:
@@ -9,6 +10,7 @@ class AIService:
     def __init__(self):
         self.db = Database()
         self.deepseek = DeepSeekAPI()
+        self.search = WebSearch()
 
     def reply_to(self, message: dict) -> str:
         """针对一条新消息生成回复。"""
@@ -66,6 +68,21 @@ class AIService:
                 {
                     "role": role,
                     "content": item["message_content"].strip(),
+                }
+            )
+
+        search_context = self.search.maybe_search(
+            message["messageContent"].strip()
+        )
+        if search_context:
+            messages.append(
+                {
+                    "role": "system",
+                    "content": (
+                        "以下是针对当前问题的实时搜索资料，仅作参考。\n"
+                        "回答时优先使用可靠来源；如果资料不足，请明确说明。\n"
+                        + search_context
+                    ),
                 }
             )
 
