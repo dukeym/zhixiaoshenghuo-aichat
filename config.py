@@ -76,7 +76,16 @@ DEEPSEEK_MODEL = os.getenv(
 # =========================
 
 POLL_INTERVAL = float(
-    os.getenv("POLL_INTERVAL", "3")
+    os.getenv("POLL_INTERVAL", "10")
+)
+
+FAST_POLL_INTERVAL = float(os.getenv("FAST_POLL_INTERVAL", "3"))
+FAST_POLL_WINDOWS = os.getenv(
+    "FAST_POLL_WINDOWS",
+    "06:20-06:30,07:30-07:40,08:20-08:30,09:10-09:20,"
+    "10:20-10:30,11:10-11:20,14:40-14:50,15:30-15:40,"
+    "16:20-16:30,17:10-17:20,18:20-18:30,20:00-20:10,"
+    "21:10-21:20",
 )
 
 AI_SEND_ENABLED = (
