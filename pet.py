@@ -47,6 +47,11 @@ class PetService:
     def has_pet(self):
         return self._get() is not None
 
+    def clear(self):
+        with self._connect() as conn:
+            conn.execute("DELETE FROM pet WHERE id = 1")
+            conn.commit()
+
     def chat_context(self):
         pet = self._get()
         if not pet:

@@ -10,7 +10,8 @@ COMMANDS = {
     "/model": "显示当前使用的模型",
     "/switch deepseek": "切换到 DeepSeek",
     "/switch xiaomimimo": "切换到小米 MiMo",
-    "/clear memory": "清除长期记忆摘要，但保留原始聊天记录",
+    "/clear memory chat": "清除聊天长期记忆摘要",
+    "/clear memory pet": "删除电子宠物及其所有数据",
     "/pet": "进入电子宠物模式或查看宠物状态",
     "/pet feed": "喂养宠物，消耗 5 金币",
     "/pet play": "陪宠物玩耍，提升心情",
@@ -30,6 +31,7 @@ class AIService:
         self.deepseek = DeepSeekAPI()
         self.search = WebSearch()
         self.pet = PetService()
+        self.pending_clear = None
         saved_provider = self.db.get_setting(
             "active_provider",
             "deepseek",
@@ -44,7 +46,33 @@ class AIService:
     def reply_to(self, message: dict) -> str:
         """针对一条新消息生成回复。"""
 
-        command = message["messageContent"].strip().lower()
+        raw_text = message["messageContent"].strip()
+        command = raw_text.lower()
+
+        if self.pending_clear:
+            if command in {"y", "yes"}:
+                target = self.pending_clear
+                self.pending_clear = None
+                if target == "chat":
+                    self.db.clear_summary()
+                    return "聊天长期记忆已清除，原始聊天记录仍然保留。"
+                self.pet.clear()
+                return "电子宠物及其等级、金币、状态已删除。"
+            if command in {"n", "no"}:
+                self.pending_clear = None
+                return "已取消清理。"
+            return "请回复 y 确认清理，或回复 n 取消。"
+
+        if command in {"/clear memory", "/clear memory chat"}:
+            self.pending_clear = "chat"
+            return "确定要清除聊天长期记忆吗？原始聊天记录不会删除。回复 y 确认，n 取消。"
+
+        if command == "/clear memory pet":
+            if not self.pet.has_pet():
+                return "当前没有电子宠物。"
+            self.pending_clear = "pet"
+            return "确定要删除电子宠物及其全部数据吗？回复 y 确认，n 取消。"
+
         if command == "/pet" or command.startswith("/pet "):
             pet_text = message["messageContent"].strip()[4:].strip()
             local_commands = {
@@ -93,10 +121,6 @@ class AIService:
                 "xiaomimimo": "小米 MiMo",
             }
             return f"当前模型：{names.get(provider, provider)}（{model}）"
-
-        if command == "/clear memory":
-            self.db.clear_summary()
-            return "长期记忆摘要已清除，原始聊天记录仍然保留。"
 
         if command.startswith("/switch "):
             target = command.split(None, 1)[1].strip()
