@@ -26,6 +26,10 @@ class AIService:
         """针对一条新消息生成回复。"""
 
         command = message["messageContent"].strip().lower()
+        if command == "/clear memory":
+            self.db.clear_summary()
+            return "长期记忆摘要已清除，原始聊天记录仍然保留。"
+
         if command.startswith("/switch "):
             target = command.split(None, 1)[1].strip()
             aliases = {

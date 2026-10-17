@@ -168,6 +168,13 @@ class Database:
             )
             conn.commit()
 
+    def clear_summary(self):
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM conversation_memory WHERE memory_key = 'default'"
+            )
+            conn.commit()
+
     def get_setting(self, key: str, default: str = "") -> str:
         with self._connect() as conn:
             row = conn.execute(
