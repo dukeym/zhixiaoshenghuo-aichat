@@ -125,6 +125,7 @@ class Database:
                     place,
                     insert_time
                 FROM messages
+                WHERE message_guid NOT LIKE 'terminal-%'
                 ORDER BY insert_time DESC, rowid DESC
                 LIMIT ?
                 """,
@@ -138,7 +139,8 @@ class Database:
     def get_message_count(self) -> int:
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT COUNT(*) FROM messages"
+                "SELECT COUNT(*) FROM messages "
+                "WHERE message_guid NOT LIKE 'terminal-%'"
             ).fetchone()
         return int(row[0])
 

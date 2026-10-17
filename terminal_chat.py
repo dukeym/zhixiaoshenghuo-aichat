@@ -2,10 +2,12 @@ import uuid
 from datetime import datetime
 
 from ai_service import AIService
+from database import Database
 
 
 def main():
-    service = AIService()
+    # 终端测试使用独立数据库，避免污染正式班牌聊天记录。
+    service = AIService(db=Database("terminal_chat.db"))
 
     print("终端模拟聊天已启动")
     print("输入 /switch deepseek 或 /switch xiaomimimo 切换模型")

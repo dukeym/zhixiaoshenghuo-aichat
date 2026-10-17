@@ -33,8 +33,8 @@ COMMANDS = {
 class AIService:
     """负责构建上下文并调用 DeepSeek。"""
 
-    def __init__(self):
-        self.db = Database()
+    def __init__(self, db=None):
+        self.db = db or Database()
         self.deepseek = DeepSeekAPI()
         self.search = WebSearch()
         self.pet = PetService()
@@ -175,6 +175,7 @@ class AIService:
             and all_count % config.SUMMARY_REFRESH_INTERVAL == 0
         ):
             older = self.db.get_recent_messages(limit=all_count)
+            older = [item for item in older if not self._is_pet_message(item)]
             older = older[:-config.RECENT_MESSAGE_LIMIT]
             if older:
                 summary = self.deepseek.summarize(
@@ -195,6 +196,8 @@ class AIService:
         history = self.db.get_recent_messages(
             limit=config.RECENT_MESSAGE_LIMIT
         )
+        # 宠物指令属于独立会话，不能进入普通聊天上下文。
+        history = [item for item in history if not self._is_pet_message(item)]
         summary = self.db.get_summary()
 
         messages = [
@@ -255,3 +258,8 @@ class AIService:
             )
 
         return self.deepseek.chat(messages)
+
+    @staticmethod
+    def _is_pet_message(item: dict) -> bool:
+        content = item.get("message_content", "").strip().lower()
+        return content == "/pet" or content.startswith("/pet ")
