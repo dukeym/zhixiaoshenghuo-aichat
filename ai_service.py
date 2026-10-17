@@ -4,6 +4,15 @@ from deepseek_api import DeepSeekAPI
 from web_search import WebSearch
 
 
+COMMANDS = {
+    "/help": "显示所有可用命令",
+    "/model": "显示当前使用的模型",
+    "/switch deepseek": "切换到 DeepSeek",
+    "/switch xiaomimimo": "切换到小米 MiMo",
+    "/clear memory": "清除长期记忆摘要，但保留原始聊天记录",
+}
+
+
 class AIService:
     """负责构建上下文并调用 DeepSeek。"""
 
@@ -26,6 +35,28 @@ class AIService:
         """针对一条新消息生成回复。"""
 
         command = message["messageContent"].strip().lower()
+        if command == "/help":
+            lines = ["可用命令："]
+            lines.extend(
+                f"{name}：{description}"
+                for name, description in COMMANDS.items()
+            )
+            lines.append("\n普通文字消息会交给当前模型处理。")
+            return "\n".join(lines)
+
+        if command == "/model":
+            provider = self.deepseek.current_provider()
+            model = (
+                config.DEEPSEEK_MODEL
+                if provider == "deepseek"
+                else config.MIMO_MODEL
+            )
+            names = {
+                "deepseek": "DeepSeek",
+                "xiaomimimo": "小米 MiMo",
+            }
+            return f"当前模型：{names.get(provider, provider)}（{model}）"
+
         if command == "/clear memory":
             self.db.clear_summary()
             return "长期记忆摘要已清除，原始聊天记录仍然保留。"
