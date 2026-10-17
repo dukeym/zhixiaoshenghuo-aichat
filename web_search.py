@@ -71,6 +71,15 @@ class WebSearch:
                 lines.append(f"{index}. {title}\n摘要：{content}\n来源：{url}")
         return "\n\n".join(lines)
 
+    def search(self, query: str) -> str:
+        """强制搜索，不要求查询包含实时关键词。"""
+        original = self.should_search
+        try:
+            self.should_search = lambda _query: True
+            return self.maybe_search(query)
+        finally:
+            self.should_search = original
+
     @staticmethod
     def _clean(value: str) -> str:
         return re.sub(r"\s+", " ", value or "").strip()

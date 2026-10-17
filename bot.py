@@ -46,6 +46,9 @@ def main():
 
     while True:
         try:
+            if config.AI_SEND_ENABLED:
+                for reminder in ai.pet.due_reminders():
+                    processor.api.send_message(reminder)
             messages = processor.poll()
 
             for message in messages:

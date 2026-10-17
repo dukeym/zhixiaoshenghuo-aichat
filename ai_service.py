@@ -1,4 +1,5 @@
 import config
+from datetime import datetime
 from database import Database
 from deepseek_api import DeepSeekAPI
 from web_search import WebSearch
@@ -20,6 +21,12 @@ COMMANDS = {
     "/pet buy 小鱼干": "购买并使用宠物道具",
     "/pet rename 名字": "给宠物改名",
     "/pet off": "退出宠物操作，回到普通聊天",
+    "/pet sign": "每日签到，领取金币和经验",
+    "/pet achievements": "查看宠物成就",
+    "/today": "查看今天日期",
+    "/search 内容": "强制联网搜索指定内容",
+    "/remind HH:MM 内容": "添加一个简单提醒",
+    "/stats": "查看聊天和宠物统计",
 }
 
 
@@ -73,11 +80,32 @@ class AIService:
             self.pending_clear = "pet"
             return "确定要删除电子宠物及其全部数据吗？回复 y 确认，n 取消。"
 
+        if command == "/today":
+            return datetime.now().strftime("今天是 %Y年%m月%d日，星期%a").replace("Mon", "一").replace("Tue", "二").replace("Wed", "三").replace("Thu", "四").replace("Fri", "五").replace("Sat", "六").replace("Sun", "日")
+
+        if command.startswith("/search "):
+            query = raw_text[8:].strip()
+            if not query:
+                return "用法：/search 你要搜索的内容"
+            result = self.search.search(query)
+            return result or "搜索没有返回结果，请检查搜索配置。"
+
+        if command.startswith("/remind "):
+            return self.pet.add_reminder(raw_text[8:].strip())
+
+        if command == "/remind":
+            return self.pet.reminders()
+
+        if command == "/stats":
+            pet_status = self.pet._status(self.pet._get()) if self.pet.has_pet() else "暂无宠物"
+            return f"聊天消息数：{self.db.get_message_count()}\n宠物：{pet_status}"
+
         if command == "/pet" or command.startswith("/pet "):
             pet_text = message["messageContent"].strip()[4:].strip()
             local_commands = {
                 "status", "状态", "feed", "喂", "喂食", "play", "玩", "玩耍",
                 "work", "工作", "挣钱", "赚钱", "shop", "商店", "off", "退出", "关闭",
+                "help", "帮助", "sign", "签到", "achievements", "成就",
             }
             is_local = (
                 not self.pet.has_pet()
