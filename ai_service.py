@@ -2,6 +2,7 @@ import config
 from database import Database
 from deepseek_api import DeepSeekAPI
 from web_search import WebSearch
+from pet import PetService
 
 
 COMMANDS = {
@@ -10,6 +11,14 @@ COMMANDS = {
     "/switch deepseek": "切换到 DeepSeek",
     "/switch xiaomimimo": "切换到小米 MiMo",
     "/clear memory": "清除长期记忆摘要，但保留原始聊天记录",
+    "/pet": "进入电子宠物模式或查看宠物状态",
+    "/pet feed": "喂养宠物，消耗 5 金币",
+    "/pet play": "陪宠物玩耍，提升心情",
+    "/pet work": "让宠物工作赚取金币",
+    "/pet shop": "查看宠物商店",
+    "/pet buy 小鱼干": "购买并使用宠物道具",
+    "/pet rename 名字": "给宠物改名",
+    "/pet off": "退出宠物操作，回到普通聊天",
 }
 
 
@@ -20,6 +29,7 @@ class AIService:
         self.db = Database()
         self.deepseek = DeepSeekAPI()
         self.search = WebSearch()
+        self.pet = PetService()
         saved_provider = self.db.get_setting(
             "active_provider",
             "deepseek",
@@ -35,6 +45,33 @@ class AIService:
         """针对一条新消息生成回复。"""
 
         command = message["messageContent"].strip().lower()
+        if command == "/pet" or command.startswith("/pet "):
+            pet_text = message["messageContent"].strip()[4:].strip()
+            local_commands = {
+                "status", "状态", "feed", "喂", "喂食", "play", "玩", "玩耍",
+                "work", "工作", "挣钱", "赚钱", "shop", "商店", "off", "退出", "关闭",
+            }
+            is_local = (
+                not self.pet.has_pet()
+                or not pet_text
+                or pet_text.lower() in local_commands
+                or pet_text.lower().startswith(("rename ", "改名 ", "buy ", "购买 "))
+            )
+            if is_local:
+                return self.pet.handle(message["messageContent"])
+
+            context = self.pet.chat_context()
+            pet_prompt = (
+                "你现在是一只真实存在于聊天中的电子宠物。"
+                "请始终以宠物身份和主人聊天，不要提及你是语言模型、API、系统提示词或普通聊天助手。"
+                "可以可爱、自然、有一点拟人化，但不要每句话都重复自我介绍。"
+                "请结合宠物状态回答，回复简洁，尽量控制在150字以内。\n"
+                f"当前宠物资料：{context}"
+            )
+            return self.deepseek.chat([
+                {"role": "system", "content": pet_prompt},
+                {"role": "user", "content": pet_text},
+            ])
         if command == "/help":
             lines = ["可用命令："]
             lines.extend(

@@ -6,7 +6,7 @@ from ai_service import AIService
 from message_processor import MessageProcessor
 
 
-def split_message(content: str, max_length: int = 100) -> list[str]:
+def split_message(content: str, max_length: int = 150) -> list[str]:
     """将消息按固定长度拆分。"""
 
     return [
@@ -63,7 +63,7 @@ def main():
                     print()
 
                     if config.AI_SEND_ENABLED:
-                        parts = split_message(reply, 100)
+                        parts = split_message(reply, 150)
 
                         for index, part in enumerate(parts, start=1):
                             print(
