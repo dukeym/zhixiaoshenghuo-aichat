@@ -1,4 +1,5 @@
 import requests
+from http.cookies import SimpleCookie
 
 import config
 
@@ -32,9 +33,12 @@ class ChatAPI:
         )
 
         if config.CHAT_COOKIE:
-            self.session.headers["Cookie"] = (
-                config.CHAT_COOKIE
-            )
+            # 不把 Cookie 固定写入请求头。登录主页会下发新的 acw_tc，
+            # 交给 Session 的 CookieJar 管理后，后续请求才能自动使用新值。
+            parsed_cookie = SimpleCookie()
+            parsed_cookie.load(config.CHAT_COOKIE)
+            for name, morsel in parsed_cookie.items():
+                self.session.cookies.set(name, morsel.value)
 
     def get_history(
         self,
