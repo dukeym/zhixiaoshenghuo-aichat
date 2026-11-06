@@ -4,6 +4,10 @@ import time
 from datetime import datetime
 
 from chat_api import ChatAPI
+from app_logging import get_logger
+
+
+logger = get_logger("monitor")
 
 
 NORMAL_INTERVAL = 3
@@ -19,7 +23,7 @@ OPENCLAW_CHANNEL = os.getenv(
 def notify(text: str):
     """通过 Windows 侧 OpenClaw CLI 给微信发送提醒。"""
     if not OPENCLAW_TARGET:
-        print("未配置 OPENCLAW_TARGET，只在终端显示提醒")
+        logger.warning("未配置 OPENCLAW_TARGET，只在终端显示提醒")
         return
 
     command = [
@@ -36,9 +40,9 @@ def notify(text: str):
             capture_output=True,
             text=True,
         )
-        print("微信提醒已发送")
+        logger.info("微信提醒已发送")
     except Exception as exc:
-        print(f"微信提醒发送失败：{exc}")
+        logger.exception("微信提醒发送失败：%s", exc)
 
 
 def main():
@@ -46,8 +50,9 @@ def main():
     last_error = None
     last_alert_at = 0.0
 
-    print("历史记录接口监控已启动")
-    print(f"正常间隔：{NORMAL_INTERVAL} 秒，异常间隔：{ERROR_INTERVAL} 秒")
+    logger.info("历史记录接口监控已启动")
+    logger.info("正常间隔：%s 秒，异常间隔：%s 秒",
+                NORMAL_INTERVAL, ERROR_INTERVAL)
 
     while True:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -56,11 +61,11 @@ def main():
             history = api.get_history(page_size=1)
             if last_error is not None:
                 message = f"聊天平台历史接口已恢复正常。时间：{now}"
-                print(message)
+                logger.info(message)
                 notify(message)
                 last_error = None
             else:
-                print(f"[{now}] 接口正常，返回 {len(history)} 条记录")
+                logger.info("接口正常，返回 %s 条记录", len(history))
             time.sleep(NORMAL_INTERVAL)
         except Exception as exc:
             error_text = str(exc)
@@ -70,7 +75,7 @@ def main():
                 f"时间：{now}\n"
                 f"错误：{error_text[:500]}"
             )
-            print(message)
+            logger.error(message)
 
             if (
                 error_key != last_error

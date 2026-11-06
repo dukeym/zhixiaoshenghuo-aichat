@@ -4,6 +4,10 @@ from datetime import datetime
 import config
 from ai_service import AIService
 from message_processor import MessageProcessor
+from app_logging import get_logger
+
+
+logger = get_logger("bot")
 
 
 def split_message(content: str, max_length: int = 150) -> list[str]:
@@ -37,12 +41,9 @@ def main():
     processor = MessageProcessor()
     ai = AIService()
 
-    print("================================")
-    print("AI Chat Bot 已启动")
-    print(f"轮询间隔: {config.POLL_INTERVAL} 秒")
-    print(f"AI_SEND_ENABLED: {config.AI_SEND_ENABLED}")
-    print("================================")
-    print()
+    logger.info("AI Chat Bot 已启动")
+    logger.info("轮询间隔: %s 秒", config.POLL_INTERVAL)
+    logger.info("AI_SEND_ENABLED: %s", config.AI_SEND_ENABLED)
 
     while True:
         try:
@@ -52,27 +53,22 @@ def main():
             messages = processor.poll()
 
             for message in messages:
-                print("收到新消息")
-                print(f"时间: {message['insertTime']}")
-                print(f"内容: {message['messageContent']}")
-                print(f"ID: {message['messageGuid']}")
-                print()
+                logger.info("收到新消息 时间=%s 内容=%s ID=%s",
+                            message["insertTime"],
+                            message["messageContent"],
+                            message["messageGuid"])
 
                 try:
                     reply = ai.reply_to(message)
 
-                    print("AI 回复:")
-                    print(reply)
-                    print()
+                    logger.info("AI 回复: %s", reply)
 
                     if config.AI_SEND_ENABLED:
                         parts = split_message(reply, 150)
 
                         for index, part in enumerate(parts, start=1):
-                            print(
-                                f"发送第 {index}/{len(parts)} 条，"
-                                f"共 {len(part)} 字"
-                            )
+                            logger.info("发送第 %s/%s 条，共 %s 字",
+                                        index, len(parts), len(part))
 
                             processor.api.send_message(part)
 
@@ -86,29 +82,21 @@ def main():
                             message["messageGuid"]
                         )
 
-                        print("AI 回复已发送")
+                        logger.info("AI 回复已发送")
                     else:
-                        print(
-                            "AI_SEND_ENABLED=false，"
-                            "本次不会实际发送"
-                        )
-
-                    print()
+                        logger.info("AI_SEND_ENABLED=false，本次不会实际发送")
 
                 except Exception as exc:
-                    print(f"处理消息失败: {exc}")
-                    print()
+                    logger.exception("处理消息失败: %s", exc)
 
             time.sleep(get_poll_interval())
 
         except KeyboardInterrupt:
-            print()
-            print("AI Chat Bot 已停止")
+            logger.info("AI Chat Bot 已停止")
             break
 
         except Exception as exc:
-            print(f"轮询发生错误: {exc}")
-            print("稍后继续尝试...")
+            logger.exception("轮询发生错误: %s；稍后继续尝试", exc)
             time.sleep(get_poll_interval())
 
 
