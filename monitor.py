@@ -15,6 +15,7 @@ logger = get_logger("monitor")
 NORMAL_INTERVAL = 3
 ERROR_INTERVAL = 3
 ALERT_COOLDOWN = 1800
+SUCCESS_NOTIFY_INTERVAL = 100
 OPENCLAW_TARGET = "o9cq801auUysbBD-UsbzsDbNiHz4@im.wechat"
 OPENCLAW_CHANNEL = os.getenv(
     "OPENCLAW_CHANNEL",
@@ -98,6 +99,7 @@ def main():
     api = ChatAPI()
     last_error = None
     last_alert_at = 0.0
+    success_count = 0
 
     logger.info("历史记录接口监控已启动")
     logger.info("正常间隔：%s 秒，异常间隔：%s 秒",
@@ -108,6 +110,7 @@ def main():
 
         try:
             history = api.get_history(page_size=1)
+            success_count += 1
             if api.last_auto_refresh:
                 message = (
                     "检测到一次 103 登录状态异常，已自动刷新主页并恢复。"
@@ -115,6 +118,11 @@ def main():
                 )
                 logger.warning(message)
                 notify(message)
+            if success_count % SUCCESS_NOTIFY_INTERVAL == 0:
+                notify(
+                    "历史接口监控进度："
+                    f"已成功轮询 {success_count} 次。时间：{now}"
+                )
             if last_error is not None:
                 message = f"聊天平台历史接口已恢复正常。时间：{now}"
                 logger.info(message)
