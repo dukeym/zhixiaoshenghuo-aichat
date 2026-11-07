@@ -25,6 +25,7 @@ class ChatAPI:
 
     def __init__(self):
         self.session = requests.Session()
+        self.last_auto_refresh = False
 
         # User-Agent 尽量模拟你抓包时使用的客户端环境。
         self.session.headers.update({
@@ -53,6 +54,7 @@ class ChatAPI:
     ) -> list[dict]:
         """获取聊天历史记录。"""
 
+        self.last_auto_refresh = False
         url = (
             config.CHAT_BASE_URL
             + self.HISTORY_PATH
@@ -98,6 +100,7 @@ class ChatAPI:
         response.raise_for_status()
         result = response.json()
         if result.get("messageCode") == 103:
+            self.last_auto_refresh = True
             logger.warning("历史接口返回 103，先刷新智校生活主页再重试")
             self.refresh_homepage()
             response = self.session.post(

@@ -18,6 +18,10 @@ OPENCLAW_CHANNEL = os.getenv(
     "OPENCLAW_CHANNEL",
     "openclaw-weixin",
 )
+OPENCLAW_WINDOWS_CWD = os.getenv(
+    "OPENCLAW_WINDOWS_CWD",
+    r"C:\Users\gm328",
+)
 
 
 def notify(text: str):
@@ -39,6 +43,7 @@ def notify(text: str):
             timeout=30,
             capture_output=True,
             text=True,
+            cwd=OPENCLAW_WINDOWS_CWD,
         )
         logger.info("微信提醒已发送")
     except Exception as exc:
@@ -57,6 +62,7 @@ def notify(text: str):
                 timeout=30,
                 capture_output=True,
                 text=True,
+                cwd=OPENCLAW_WINDOWS_CWD,
             )
             logger.info("微信提醒已发送（PowerShell）")
         except Exception as fallback_exc:
@@ -77,6 +83,13 @@ def main():
 
         try:
             history = api.get_history(page_size=1)
+            if api.last_auto_refresh:
+                message = (
+                    "检测到一次 103 登录状态异常，已自动刷新主页并恢复。"
+                    f"时间：{now}"
+                )
+                logger.warning(message)
+                notify(message)
             if last_error is not None:
                 message = f"聊天平台历史接口已恢复正常。时间：{now}"
                 logger.info(message)
