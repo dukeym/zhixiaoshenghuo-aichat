@@ -37,6 +37,26 @@ def get_poll_interval() -> float:
     return config.POLL_INTERVAL
 
 
+def send_daily_weather(processor, ai):
+    """每天 21:00 后发送一次今天和明天天气。"""
+    now = datetime.now()
+    if now.hour < 21:
+        return
+    today = now.date().isoformat()
+    if processor.db.get_setting("weather_last_sent") == today:
+        return
+    try:
+        parts = split_message(ai.weather.forecast(), 150)
+        for index, part in enumerate(parts, start=1):
+            processor.api.send_message(part)
+            if index < len(parts):
+                time.sleep(1)
+        processor.db.save_setting("weather_last_sent", today)
+        logger.info("每日天气已发送：%s", today)
+    except Exception as exc:
+        logger.exception("每日天气发送失败：%s", exc)
+
+
 def main():
     processor = MessageProcessor()
     ai = AIService()
@@ -48,6 +68,7 @@ def main():
     while True:
         try:
             if config.AI_SEND_ENABLED:
+                send_daily_weather(processor, ai)
                 for reminder in ai.pet.due_reminders():
                     processor.api.send_message(reminder)
             messages = processor.poll()

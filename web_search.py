@@ -27,6 +27,11 @@ class WebSearch:
         if not config.SEARCH_ENABLED or not self.should_search(query):
             return ""
 
+        if self._looks_like_sports(query):
+            sports_result = self._sports_scores()
+            if sports_result:
+                return sports_result
+
         if config.SEARCH_PROVIDER != "tavily":
             print(f"暂不支持搜索服务: {config.SEARCH_PROVIDER}")
             return ""
@@ -87,6 +92,47 @@ class WebSearch:
     @staticmethod
     def _looks_like_news(query: str) -> bool:
         return any(word in query for word in ("新闻", "公告", "最新消息"))
+
+    @staticmethod
+    def _looks_like_sports(query: str) -> bool:
+        text = query.lower()
+        return any(word in text for word in (
+            "nba", "篮球", "比分", "战况", "赛况", "比赛结果",
+        ))
+
+    @staticmethod
+    def _sports_scores() -> str:
+        """优先读取 ESPN 当前 scoreboard，避免用普通网页搜索猜比分。"""
+        try:
+            response = requests.get(
+                "https://site.api.espn.com/apis/site/v2/sports/"
+                "basketball/nba/scoreboard",
+                timeout=config.SEARCH_TIMEOUT,
+                headers={"User-Agent": "Mozilla/5.0"},
+            )
+            response.raise_for_status()
+            events = response.json().get("events", [])
+        except Exception as exc:
+            print(f"NBA 实时比分接口失败，改用网页搜索: {exc}")
+            return ""
+
+        if not events:
+            return "NBA 今天暂时没有比赛，或当前还没有发布赛程。"
+
+        lines = ["NBA 实时赛况："]
+        for event in events:
+            competition = (event.get("competitions") or [{}])[0]
+            status = event.get("status", {}).get("type", {})
+            detail = status.get("detail") or status.get("shortDetail") or "状态未知"
+            teams = []
+            for competitor in competition.get("competitors", []):
+                team = competitor.get("team", {})
+                name = team.get("displayName") or team.get("abbreviation", "球队")
+                score = competitor.get("score", "-")
+                teams.append(f"{name} {score}")
+            if teams:
+                lines.append(f"{' vs '.join(teams)}｜{detail}")
+        return "\n".join(lines)
 
     @staticmethod
     def _build_query(query: str) -> str:

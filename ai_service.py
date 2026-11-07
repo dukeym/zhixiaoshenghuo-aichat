@@ -4,6 +4,7 @@ from database import Database
 from deepseek_api import DeepSeekAPI
 from web_search import WebSearch
 from pet import PetService
+from weather import WeatherService
 
 
 COMMANDS = {
@@ -25,6 +26,8 @@ COMMANDS = {
     "/pet achievements": "查看宠物成就",
     "/today": "查看今天日期",
     "/search 内容": "强制联网搜索指定内容",
+    "/weather": "查询邯郸今天和明天天气",
+    "/price 内容": "查询商品或服务的当前价格",
     "/remind HH:MM 内容": "添加一个简单提醒",
     "/stats": "查看聊天和宠物统计",
 }
@@ -37,6 +40,7 @@ class AIService:
         self.db = db or Database()
         self.deepseek = DeepSeekAPI()
         self.search = WebSearch()
+        self.weather = WeatherService()
         self.pet = PetService()
         self.pending_clear = None
         saved_provider = self.db.get_setting(
@@ -82,6 +86,16 @@ class AIService:
 
         if command == "/today":
             return datetime.now().strftime("今天是 %Y年%m月%d日，星期%a").replace("Mon", "一").replace("Tue", "二").replace("Wed", "三").replace("Thu", "四").replace("Fri", "五").replace("Sat", "六").replace("Sun", "日")
+
+        if command == "/weather" or command.startswith("/weather "):
+            return self.weather.forecast()
+
+        if command.startswith("/price "):
+            query = raw_text[7:].strip()
+            if not query:
+                return "用法：/price 商品或服务名称"
+            result = self.search.search(f"{query} 当前价格 今天")
+            return result or "暂时没有找到可靠的当前价格。"
 
         if command.startswith("/search "):
             query = raw_text[8:].strip()
