@@ -11,12 +11,26 @@ logger = get_logger("bot")
 
 
 def split_message(content: str, max_length: int = 150) -> list[str]:
-    """将消息按固定长度拆分。"""
+    """尽量按换行拆分，避免比赛或天气信息被截断。"""
+    if len(content) <= max_length:
+        return [content]
 
-    return [
-        content[i:i + max_length]
-        for i in range(0, len(content), max_length)
-    ]
+    parts = []
+    current = ""
+    for line in content.splitlines():
+        candidate = f"{current}\n{line}" if current else line
+        if len(candidate) <= max_length:
+            current = candidate
+            continue
+        if current:
+            parts.append(current)
+        while len(line) > max_length:
+            parts.append(line[:max_length])
+            line = line[max_length:]
+        current = line
+    if current:
+        parts.append(current)
+    return parts
 
 
 def get_poll_interval() -> float:

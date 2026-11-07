@@ -27,6 +27,7 @@ COMMANDS = {
     "/today": "查看今天日期",
     "/search 内容": "强制联网搜索指定内容",
     "/weather": "查询邯郸今天和明天天气",
+    "/weather hourly": "查询未来 12 小时天气",
     "/price 内容": "查询商品或服务的当前价格",
     "/remind HH:MM 内容": "添加一个简单提醒",
     "/stats": "查看聊天和宠物统计",
@@ -87,7 +88,13 @@ class AIService:
         if command == "/today":
             return datetime.now().strftime("今天是 %Y年%m月%d日，星期%a").replace("Mon", "一").replace("Tue", "二").replace("Wed", "三").replace("Thu", "四").replace("Fri", "五").replace("Sat", "六").replace("Sun", "日")
 
+        if command == "/weather hourly" or "小时天气" in raw_text:
+            return self.weather.hourly_forecast()
+
         if command == "/weather" or command.startswith("/weather "):
+            return self.weather.forecast()
+
+        if "天气" in raw_text:
             return self.weather.forecast()
 
         if command.startswith("/price "):

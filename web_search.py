@@ -8,6 +8,7 @@ import config
 SEARCH_WORDS = (
     "帮我搜", "搜索", "查一下", "查查", "最新", "今天", "现在",
     "新闻", "天气", "价格", "票价", "汇率", "比赛", "赛程",
+    "比分", "战况", "赛况", "nba", "篮球",
     "政策", "公告", "最近", "实时", "缅甸",
 )
 
@@ -131,7 +132,7 @@ class WebSearch:
                 score = competitor.get("score", "-")
                 teams.append(f"{name} {score}")
             if teams:
-                lines.append(f"{' vs '.join(teams)}｜{detail}")
+                lines.append(f"{'，'.join(teams)}（{detail}）")
         return "\n".join(lines)
 
     @staticmethod

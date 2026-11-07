@@ -76,6 +76,39 @@ class WeatherService:
             )
         return "\n".join(lines)
 
+    def hourly_forecast(self) -> str:
+        location = self._geocode(config.WEATHER_LOCATION)
+        if not location:
+            return "逐小时天气查询失败：找不到地区。"
+        response = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": location["latitude"],
+                "longitude": location["longitude"],
+                "hourly": "temperature_2m,weather_code,precipitation_probability",
+                "forecast_days": 2,
+                "timezone": "Asia/Shanghai",
+            },
+            timeout=config.WEATHER_TIMEOUT,
+        )
+        response.raise_for_status()
+        data = response.json().get("hourly", {})
+        times = data.get("time", [])
+        temperatures = data.get("temperature_2m", [])
+        codes = data.get("weather_code", [])
+        rain = data.get("precipitation_probability", [])
+        now = datetime.now().strftime("%Y-%m-%dT%H:00")
+        start = next((i for i, value in enumerate(times) if value >= now), 0)
+        lines = [f"{config.WEATHER_LOCATION}未来逐小时天气"]
+        for index in range(start, min(start + 12, len(times))):
+            clock = times[index].split("T")[-1]
+            lines.append(
+                f"{clock} {temperatures[index]}°C "
+                f"{WEATHER_CODES.get(codes[index], '未知')} "
+                f"降水{rain[index]}%"
+            )
+        return "\n".join(lines)
+
     @staticmethod
     def _geocode(query: str):
         response = requests.get(
