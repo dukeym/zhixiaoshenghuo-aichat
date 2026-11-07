@@ -3,6 +3,8 @@ import subprocess
 import time
 from datetime import datetime
 
+import requests
+
 from chat_api import ChatAPI
 from app_logging import get_logger
 
@@ -20,12 +22,16 @@ OPENCLAW_CHANNEL = os.getenv(
 )
 OPENCLAW_WINDOWS_CWD = os.getenv(
     "OPENCLAW_WINDOWS_CWD",
-    r"C:\Users\gm328",
+    "/mnt/c/Users/gm328",
 )
+NTFY_TOPIC = os.getenv("NTFY_TOPIC", "")
 
 
 def notify(text: str):
     """通过 Windows 侧 OpenClaw CLI 给微信发送提醒。"""
+    if NTFY_TOPIC and notify_ntfy(text):
+        return
+
     if not OPENCLAW_TARGET:
         logger.warning("未配置 OPENCLAW_TARGET，只在终端显示提醒")
         return
@@ -43,7 +49,7 @@ def notify(text: str):
             timeout=30,
             capture_output=True,
             text=True,
-            cwd=OPENCLAW_WINDOWS_CWD,
+            **({"cwd": OPENCLAW_WINDOWS_CWD} if os.path.isdir(OPENCLAW_WINDOWS_CWD) else {}),
         )
         logger.info("微信提醒已发送")
     except Exception as exc:
@@ -62,11 +68,30 @@ def notify(text: str):
                 timeout=30,
                 capture_output=True,
                 text=True,
-                cwd=OPENCLAW_WINDOWS_CWD,
+                **({"cwd": OPENCLAW_WINDOWS_CWD} if os.path.isdir(OPENCLAW_WINDOWS_CWD) else {}),
             )
             logger.info("微信提醒已发送（PowerShell）")
         except Exception as fallback_exc:
             logger.exception("OpenClaw 两种调用方式都失败：%s", fallback_exc)
+
+
+def notify_ntfy(text: str) -> bool:
+    """通过 ntfy 推送到手机；禁用环境代理，避免代理握手失败。"""
+    try:
+        session = requests.Session()
+        session.trust_env = False
+        response = session.post(
+            f"https://ntfy.sh/{NTFY_TOPIC}",
+            data=text.encode("utf-8"),
+            headers={"Title": "chat-monitor"},
+            timeout=15,
+        )
+        response.raise_for_status()
+        logger.info("ntfy 通知已发送")
+        return True
+    except Exception as exc:
+        logger.exception("ntfy 通知发送失败：%s", exc)
+        return False
 
 
 def main():
