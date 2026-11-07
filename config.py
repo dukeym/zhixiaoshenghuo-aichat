@@ -56,6 +56,8 @@ LOGIN_GUID = get_required_env(
     "LOGIN_GUID"
 )
 
+DING_CORP_ID = os.getenv("DING_CORP_ID", "")
+
 
 # =========================
 # DeepSeek

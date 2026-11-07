@@ -12,7 +12,7 @@ def get_logger(name: str) -> logging.Logger:
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter(
         "%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     file_handler = RotatingFileHandler(
         Path(f"{name}.log"),

@@ -42,7 +42,25 @@ def notify(text: str):
         )
         logger.info("微信提醒已发送")
     except Exception as exc:
-        logger.exception("微信提醒发送失败：%s", exc)
+        logger.warning("cmd.exe 调用 OpenClaw 失败：%s，尝试 PowerShell", exc)
+        try:
+            escaped = text.replace("'", "''")
+            powershell_command = (
+                "openclaw message send "
+                f"--channel '{OPENCLAW_CHANNEL}' "
+                f"--target '{OPENCLAW_TARGET}' "
+                f"--message '{escaped}'"
+            )
+            subprocess.run(
+                ["powershell.exe", "-NoProfile", "-Command", powershell_command],
+                check=True,
+                timeout=30,
+                capture_output=True,
+                text=True,
+            )
+            logger.info("微信提醒已发送（PowerShell）")
+        except Exception as fallback_exc:
+            logger.exception("OpenClaw 两种调用方式都失败：%s", fallback_exc)
 
 
 def main():
