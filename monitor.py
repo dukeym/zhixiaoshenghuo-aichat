@@ -1,6 +1,7 @@
 import os
 import subprocess
 import time
+import argparse
 from datetime import datetime
 
 import requests
@@ -12,8 +13,7 @@ from app_logging import get_logger
 logger = get_logger("monitor")
 
 
-NORMAL_INTERVAL = 3
-ERROR_INTERVAL = 3
+DEFAULT_INTERVAL = 3
 ALERT_COOLDOWN = 1800
 SUCCESS_NOTIFY_INTERVAL = 100
 OPENCLAW_TARGET = "o9cq801auUysbBD-UsbzsDbNiHz4@im.wechat"
@@ -95,15 +95,29 @@ def notify_ntfy(text: str) -> bool:
         return False
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="聊天历史接口监控")
+    parser.add_argument(
+        "-t", "--interval",
+        type=float,
+        default=DEFAULT_INTERVAL,
+        help="轮询间隔秒数，默认 3 秒",
+    )
+    args = parser.parse_args()
+    if args.interval <= 0:
+        parser.error("轮询间隔必须大于 0")
+    return args
+
+
 def main():
+    interval = parse_args().interval
     api = ChatAPI()
     last_error = None
     last_alert_at = 0.0
     success_count = 0
 
     logger.info("历史记录接口监控已启动")
-    logger.info("正常间隔：%s 秒，异常间隔：%s 秒",
-                NORMAL_INTERVAL, ERROR_INTERVAL)
+    logger.info("轮询间隔：%s 秒", interval)
 
     while True:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -130,7 +144,7 @@ def main():
                 last_error = None
             else:
                 logger.info("接口正常，返回 %s 条记录", len(history))
-            time.sleep(NORMAL_INTERVAL)
+            time.sleep(interval)
         except Exception as exc:
             error_text = str(exc)
             error_key = error_text[:300]
@@ -149,7 +163,7 @@ def main():
                 last_error = error_key
                 last_alert_at = time.time()
 
-            time.sleep(ERROR_INTERVAL)
+            time.sleep(interval)
 
 
 if __name__ == "__main__":
