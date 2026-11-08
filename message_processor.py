@@ -20,6 +20,12 @@ class MessageProcessor:
             message_guid = message["messageGuid"]
 
             if self.db.message_exists(message_guid):
+                # 已成功处理的消息去重；之前处理失败的消息允许重试。
+                if not self.db.message_pending(message_guid):
+                    continue
+                if int(message["place"]) != 1:
+                    continue
+                new_messages.append(message)
                 continue
 
             # 先保存所有新消息

@@ -2,6 +2,9 @@
 .env.*
 !.env.example
 
+# 本地登录资料和临时文件
+tempfile/
+
 __pycache__/
 *.py[cod]
 

@@ -1,3 +1,5 @@
+import time
+
 import requests
 from http.cookies import SimpleCookie
 
@@ -91,27 +93,7 @@ class ChatAPI:
         return content.get("data", [])
 
     def _history_request(self, url: str, payload: dict) -> dict:
-        response = self.session.post(
-            url,
-            params={"unitGuid": config.UNIT_GUID},
-            json=payload,
-            timeout=15,
-        )
-        response.raise_for_status()
-        result = response.json()
-        if result.get("messageCode") == 103:
-            self.last_auto_refresh = True
-            logger.warning("历史接口返回 103，先刷新智校生活主页再重试")
-            self.refresh_homepage()
-            response = self.session.post(
-                url,
-                params={"unitGuid": config.UNIT_GUID},
-                json=payload,
-                timeout=15,
-            )
-            response.raise_for_status()
-            result = response.json()
-        return result
+        return self._request_with_retry(url, payload, "历史")
 
     def refresh_homepage(self) -> bool:
         """模拟打开智校生活主页，刷新主页状态和服务器下发的 Cookie。"""
@@ -186,23 +168,45 @@ class ChatAPI:
         return self._send_request(url, payload)
 
     def _send_request(self, url: str, payload: dict) -> dict:
-        response = self.session.post(
-            url,
-            params={"unitGuid": config.UNIT_GUID},
-            json=payload,
-            timeout=15,
-        )
-        response.raise_for_status()
-        result = response.json()
-        if result.get("messageCode") == 103:
-            logger.warning("发送接口返回 103，先刷新智校生活主页再重试")
-            self.refresh_homepage()
-            response = self.session.post(
-                url,
-                params={"unitGuid": config.UNIT_GUID},
-                json=payload,
-                timeout=15,
-            )
-            response.raise_for_status()
-            result = response.json()
-        return result
+        return self._request_with_retry(url, payload, "发送")
+
+    def _request_with_retry(self, url: str, payload: dict, name: str) -> dict:
+        """对网络错误和 5xx 进行有限重试；103 只触发一次登录刷新。"""
+        attempts = max(1, config.REQUEST_RETRIES)
+        refreshed = False
+
+        for attempt in range(1, attempts + 1):
+            try:
+                response = self.session.post(
+                    url,
+                    params={"unitGuid": config.UNIT_GUID},
+                    json=payload,
+                    timeout=15,
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                if result.get("messageCode") == 103 and not refreshed:
+                    refreshed = True
+                    self.last_auto_refresh = True
+                    logger.warning(
+                        "%s接口返回 103，刷新智校生活主页后重试",
+                        name,
+                    )
+                    self.refresh_homepage()
+                    continue
+
+                if result.get("messageCode") == 103:
+                    raise RuntimeError(f"{name}接口连续返回 103")
+                return result
+            except (requests.RequestException, ValueError) as exc:
+                if attempt >= attempts:
+                    raise
+                delay = config.REQUEST_RETRY_BACKOFF * (2 ** (attempt - 1))
+                logger.warning(
+                    "%s请求失败（第 %s/%s 次）：%s；%.1f 秒后重试",
+                    name, attempt, attempts, exc, delay,
+                )
+                time.sleep(delay)
+
+        raise RuntimeError(f"{name}请求失败")

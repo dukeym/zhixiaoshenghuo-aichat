@@ -88,6 +88,9 @@ POLL_INTERVAL = float(
     os.getenv("POLL_INTERVAL", "10")
 )
 
+REQUEST_RETRIES = int(os.getenv("REQUEST_RETRIES", "3"))
+REQUEST_RETRY_BACKOFF = float(os.getenv("REQUEST_RETRY_BACKOFF", "1"))
+
 FAST_POLL_INTERVAL = float(os.getenv("FAST_POLL_INTERVAL", "3"))
 FAST_POLL_WINDOWS = os.getenv(
     "FAST_POLL_WINDOWS",

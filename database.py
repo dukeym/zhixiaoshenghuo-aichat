@@ -62,6 +62,19 @@ class Database:
 
             return cursor.fetchone() is not None
 
+    def message_pending(self, message_guid: str) -> bool:
+        """判断消息是否已保存但尚未成功处理。"""
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT processed
+                FROM messages
+                WHERE message_guid = ?
+                """,
+                (message_guid,),
+            ).fetchone()
+        return row is not None and int(row[0]) == 0
+
     def save_message(self, message: dict):
         with self._connect() as conn:
             conn.execute(
