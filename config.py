@@ -115,6 +115,12 @@ AI_SYSTEM_PROMPT = os.getenv(
 猫娘模式仍然必须诚实回答知识问题，不要因为角色扮演而捏造事实，也不要使用低俗、冒犯或不适合校园环境的内容。""",
 )
 
+PLAIN_TEXT_INSTRUCTION = (
+    "输出只能使用普通纯文本。严禁使用 Markdown 或类似格式：不要使用 # 标题、"
+    "* 或 ** 加粗/斜体、- 或 1. 列表、``` 代码块、表格、链接语法。"
+    "需要分段时只使用换行，需要列举时使用自然语言或简单的中文序号。"
+)
+
 RECENT_MESSAGE_LIMIT = int(os.getenv("RECENT_MESSAGE_LIMIT", "6"))
 SUMMARY_REFRESH_INTERVAL = int(
     os.getenv("SUMMARY_REFRESH_INTERVAL", "20")

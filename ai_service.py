@@ -228,7 +228,11 @@ class AIService:
         messages = [
             {
                 "role": "system",
-                "content": config.AI_SYSTEM_PROMPT,
+                "content": (
+                    config.AI_SYSTEM_PROMPT
+                    + "\n\n"
+                    + config.PLAIN_TEXT_INSTRUCTION
+                ),
             }
         ]
 
@@ -257,12 +261,19 @@ class AIService:
             message["messageContent"].strip()
         )
         if search_context:
+            sports_instruction = ""
+            if self.search._looks_like_sports(message["messageContent"]):
+                sports_instruction = (
+                    "\n这是 NBA 实时比分资料。请只用普通文本回答，"
+                    "按球队、比分和比赛状态清楚分行，绝对不要使用 Markdown。"
+                )
             messages.append(
                 {
                     "role": "system",
                     "content": (
                         "以下是针对当前问题的实时搜索资料，仅作参考。\n"
                         "回答时优先使用可靠来源；如果资料不足，请明确说明。\n"
+                        + sports_instruction
                         + search_context
                     ),
                 }
