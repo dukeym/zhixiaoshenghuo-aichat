@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -105,7 +106,8 @@ class WebSearch:
     @staticmethod
     def _sports_scores(query: str = "") -> str:
         """读取指定日期的 ESPN scoreboard，避免模型自行猜日期。"""
-        target_date = datetime.now().date()
+        # 项目运行环境按北京时间（UTC+8）解释“今天、昨天、明天”。
+        target_date = datetime.now(ZoneInfo("Asia/Shanghai")).date()
         if any(word in query.lower() for word in ("昨天", "yesterday")):
             target_date -= timedelta(days=1)
         elif any(word in query.lower() for word in ("明天", "tomorrow")):
@@ -126,9 +128,9 @@ class WebSearch:
             return ""
 
         if not events:
-            return f"NBA {target_date.isoformat()} 没有比赛，或当天还没有发布赛程。"
+            return f"NBA 北京时间 {target_date.isoformat()} 没有比赛，或当天还没有发布赛程。"
 
-        lines = [f"NBA {target_date.isoformat()} 比分："]
+        lines = [f"NBA 北京时间 {target_date.isoformat()} 比分："]
         for event in events:
             competition = (event.get("competitions") or [{}])[0]
             status = event.get("status", {}).get("type", {})

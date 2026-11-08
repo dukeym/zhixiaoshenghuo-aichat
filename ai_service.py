@@ -265,6 +265,7 @@ class AIService:
             if self.search._looks_like_sports(message["messageContent"]):
                 sports_instruction = (
                     "\n这是 NBA 实时比分资料。请只用普通文本回答，"
+                    "日期均按北京时间（UTC+8）理解和说明。"
                     "按球队、比分和比赛状态清楚分行，绝对不要使用 Markdown。"
                     "不要自行推算或修改日期，不要调用工具，不要输出 <tool_call> "
                     "或任何工具调用 XML。"
