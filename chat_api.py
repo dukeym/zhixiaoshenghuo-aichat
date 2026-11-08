@@ -4,7 +4,7 @@ import requests
 from http.cookies import SimpleCookie
 
 import config
-from app_logging import get_logger
+from app_logging import get_logger, safe_text
 
 
 logger = get_logger("chat_api")
@@ -147,6 +147,8 @@ class ChatAPI:
         content: str,
     ) -> dict:
         """向聊天平台发送一条消息。"""
+
+        content = safe_text(content)
 
         url = (
             config.CHAT_BASE_URL
