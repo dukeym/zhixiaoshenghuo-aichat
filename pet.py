@@ -1,6 +1,6 @@
 import random
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -58,10 +58,16 @@ class PetService:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
                     remind_at TEXT NOT NULL,
-                    done INTEGER NOT NULL DEFAULT 0
+                    done INTEGER NOT NULL DEFAULT 0,
+                    repeat_rule TEXT NOT NULL DEFAULT 'once'
                 )
                 """
             )
+            columns = [row[1] for row in conn.execute("PRAGMA table_info(pet_reminders)")]
+            if "repeat_rule" not in columns:
+                conn.execute(
+                    "ALTER TABLE pet_reminders ADD COLUMN repeat_rule TEXT NOT NULL DEFAULT 'once'"
+                )
             conn.commit()
 
     def _get(self):
@@ -165,43 +171,101 @@ class PetService:
 
     def reminders(self):
         with self._connect() as conn:
-            rows = conn.execute("SELECT content, remind_at FROM pet_reminders WHERE done=0 ORDER BY remind_at").fetchall()
+            rows = conn.execute(
+                "SELECT content, remind_at, repeat_rule FROM pet_reminders "
+                "WHERE done=0 ORDER BY remind_at"
+            ).fetchall()
         if not rows:
             return "暂无提醒。"
-        return "提醒：\n" + "\n".join(f"{when}：{content}" for content, when in rows)
+        labels = {"once": "一次", "daily": "每天", "weekly": "每周"}
+        return "提醒：\n" + "\n".join(
+            f"{when}（{labels.get(rule, rule)}）：{content}"
+            for content, when, rule in rows
+        )
 
     def add_reminder(self, text):
         parts = text.split(None, 1)
         if len(parts) != 2 or len(parts[0]) != 5 or parts[0][2] != ":":
             return "用法：/remind HH:MM 内容，例如 /remind 18:30 记得喂宠物"
+        return self._save_reminder(parts[0], parts[1], "once", datetime.now())
+
+    def add_workflow(self, text):
+        """解析简单自然语言工作流并保存提醒。"""
+        text = text.strip()
+        repeat = "once"
+        prefix = ""
+        if text.startswith("每天"):
+            repeat, prefix = "daily", "每天"
+        elif text.startswith("每周"):
+            repeat, prefix = "weekly", "每周"
+        elif text.startswith("明天"):
+            prefix = "明天"
+        else:
+            return ""
+
+        rest = text[len(prefix):].strip()
+        parts = rest.split(None, 1)
+        if len(parts) != 2 or len(parts[0]) != 5 or parts[0][2] != ":":
+            return "时间格式请使用 HH:MM，例如：每天 07:30 背单词。"
         when, content = parts
         try:
             datetime.strptime(when, "%H:%M")
         except ValueError:
-            return "时间格式不正确，请使用 HH:MM，例如 18:30。"
-        today = datetime.now().date().isoformat()
+            return "时间格式不正确，请使用 HH:MM，例如：每天 07:30 背单词。"
+        now = datetime.now()
+        target = now
+        if prefix == "明天":
+            target += timedelta(days=1)
+        return self._save_reminder(when, content, repeat, target)
+
+    def _save_reminder(self, when, content, repeat, date):
+        target = date.replace(hour=int(when[:2]), minute=int(when[3:5]), second=0, microsecond=0)
+        current = datetime.now()
+        if target <= current:
+            if repeat == "daily":
+                target += timedelta(days=1)
+            elif repeat == "weekly":
+                target += timedelta(days=7)
+            elif repeat == "once":
+                target += timedelta(days=1)
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO pet_reminders(content, remind_at) VALUES (?, ?)",
-                (content[:100], f"{today} {when}"),
+                "INSERT INTO pet_reminders(content, remind_at, repeat_rule) VALUES (?, ?, ?)",
+                (content[:100], target.strftime("%Y-%m-%d %H:%M"), repeat),
             )
             conn.commit()
-        return f"提醒已添加：今天 {when}，{content[:100]}"
+        labels = {"once": "一次性", "daily": "每天", "weekly": "每周"}
+        return f"提醒已添加：{target.strftime('%Y-%m-%d %H:%M')}（{labels[repeat]}），{content[:100]}"
 
     def due_reminders(self):
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT id, content, remind_at FROM pet_reminders "
+                "SELECT id, content, remind_at, repeat_rule FROM pet_reminders "
                 "WHERE done=0 AND remind_at <= ? ORDER BY remind_at",
                 (now,),
             ).fetchall()
-            conn.executemany(
-                "UPDATE pet_reminders SET done=1 WHERE id = ?",
-                [(row[0],) for row in rows],
-            )
+            for row in rows:
+                next_time = self._next_reminder_time(row[2], row[3])
+                if next_time:
+                    while next_time <= now and row[3] in {"daily", "weekly"}:
+                        next_time = self._next_reminder_time(next_time, row[3])
+                    conn.execute(
+                        "UPDATE pet_reminders SET remind_at = ? WHERE id = ?",
+                        (next_time, row[0]),
+                    )
+                else:
+                    conn.execute("UPDATE pet_reminders SET done=1 WHERE id = ?", (row[0],))
             conn.commit()
         return [f"提醒：{row[2]}，{row[1]}" for row in rows]
+
+    @staticmethod
+    def _next_reminder_time(remind_at, repeat):
+        if repeat == "daily":
+            return (datetime.strptime(remind_at, "%Y-%m-%d %H:%M") + timedelta(days=1)).strftime("%Y-%m-%d %H:%M")
+        if repeat == "weekly":
+            return (datetime.strptime(remind_at, "%Y-%m-%d %H:%M") + timedelta(days=7)).strftime("%Y-%m-%d %H:%M")
+        return None
 
     def _update(self, **changes):
         changes["updated_at"] = datetime.now().isoformat(timespec="seconds")

@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+from app_logging import safe_text
+
 
 DB_PATH = Path("chat_bot.db")
 
@@ -91,7 +93,7 @@ class Database:
                 """,
                 (
                     message["messageGuid"],
-                    message["messageContent"].strip(),
+                    safe_text(message["messageContent"].strip()),
                     int(message["place"]),
                     message["insertTime"],
                 ),

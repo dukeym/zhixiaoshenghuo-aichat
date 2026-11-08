@@ -117,6 +117,10 @@ class AIService:
         if command == "/remind":
             return self.pet.reminders()
 
+        workflow_reply = self.pet.add_workflow(raw_text)
+        if workflow_reply:
+            return workflow_reply
+
         if command == "/stats":
             pet_status = self.pet._status(self.pet._get()) if self.pet.has_pet() else "暂无宠物"
             return f"聊天消息数：{self.db.get_message_count()}\n宠物：{pet_status}"

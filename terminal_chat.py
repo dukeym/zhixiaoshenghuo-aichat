@@ -3,6 +3,7 @@ from datetime import datetime
 
 from ai_service import AIService
 from database import Database
+from app_logging import safe_text
 
 
 def main():
@@ -38,10 +39,10 @@ def main():
         try:
             service.db.save_message(message)
             reply = service.reply_to(message)
-            print("AI：" + reply)
+            print("AI：" + safe_text(reply))
             print()
         except Exception as exc:
-            print(f"AI 请求失败：{exc}\n")
+            print(f"AI 请求失败：{safe_text(str(exc))}\n")
 
 
 if __name__ == "__main__":
