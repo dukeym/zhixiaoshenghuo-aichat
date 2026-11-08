@@ -266,6 +266,7 @@ class AIService:
                 sports_instruction = (
                     "\n这是 NBA 实时比分资料。请只用普通文本回答，"
                     "按球队、比分和比赛状态清楚分行，绝对不要使用 Markdown。"
+                    "不要调用工具，不要输出 <tool_call> 或任何工具调用 XML。"
                 )
             messages.append(
                 {
@@ -293,7 +294,18 @@ class AIService:
                 }
             )
 
-        return self.deepseek.chat(messages)
+        reply = self.deepseek.chat(messages)
+
+        # MiMo 偶尔会把伪工具调用当成普通文本返回。NBA 数据已经由
+        # 程序直接获取，遇到这种情况不能把内部调用格式展示给用户。
+        if (
+            search_context
+            and self.search._looks_like_sports(message["messageContent"])
+            and "<tool_call>" in reply
+        ):
+            return search_context
+
+        return reply
 
     @staticmethod
     def _is_pet_message(item: dict) -> bool:
