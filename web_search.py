@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta
 
 import requests
 
@@ -29,7 +30,7 @@ class WebSearch:
             return ""
 
         if self._looks_like_sports(query):
-            sports_result = self._sports_scores()
+            sports_result = self._sports_scores(query)
             if sports_result:
                 return sports_result
 
@@ -102,12 +103,19 @@ class WebSearch:
         ))
 
     @staticmethod
-    def _sports_scores() -> str:
-        """优先读取 ESPN 当前 scoreboard，避免用普通网页搜索猜比分。"""
+    def _sports_scores(query: str = "") -> str:
+        """读取指定日期的 ESPN scoreboard，避免模型自行猜日期。"""
+        target_date = datetime.now().date()
+        if any(word in query.lower() for word in ("昨天", "yesterday")):
+            target_date -= timedelta(days=1)
+        elif any(word in query.lower() for word in ("明天", "tomorrow")):
+            target_date += timedelta(days=1)
+        date_text = target_date.strftime("%Y%m%d")
         try:
             response = requests.get(
                 "https://site.api.espn.com/apis/site/v2/sports/"
                 "basketball/nba/scoreboard",
+                params={"dates": date_text},
                 timeout=config.SEARCH_TIMEOUT,
                 headers={"User-Agent": "Mozilla/5.0"},
             )
@@ -118,9 +126,9 @@ class WebSearch:
             return ""
 
         if not events:
-            return "NBA 今天暂时没有比赛，或当前还没有发布赛程。"
+            return f"NBA {target_date.isoformat()} 没有比赛，或当天还没有发布赛程。"
 
-        lines = ["NBA 实时赛况："]
+        lines = [f"NBA {target_date.isoformat()} 比分："]
         for event in events:
             competition = (event.get("competitions") or [{}])[0]
             status = event.get("status", {}).get("type", {})
